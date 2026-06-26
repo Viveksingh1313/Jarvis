@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S - AI Voice Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%231A56DB'/><circle cx='50' cy='50' r='25' fill='%2338BDF8'/></svg>">
+</head>
+<body>
+    <!-- Boot Sequence -->
+    <div class="boot-sequence" id="boot">
+        <div class="boot-text">J.A.R.V.I.S ONLINE</div>
+    </div>
+    
+    <!-- Three.js Canvas -->
+    <canvas id="canvas"></canvas>
+    
+    <!-- HUD Overlay -->
+    <div id="hud">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="title">J.A.R.V.I.S v2.0</div>
+            <div class="status-container">
+                <div id="status-dot"></div>
+                <span id="status-text">Initializing...</span>
+            </div>
+        </div>
+        
+        <!-- Center Area -->
+        <div class="center-area">
+            <div id="click-hint">Press SPACE or click reactor to speak</div>
+        </div>
+        
+        <!-- Bottom Bar -->
+        <div class="bottom-bar">
+            <!-- Interim Speech Display -->
+            <div id="interim-text"></div>
+            
+            <!-- Text Input Fallback -->
+            <div id="text-input-container">
+                <input type="text" id="text-input" placeholder="Type your message..." autocomplete="off">
+                <button id="send-btn">Send</button>
+            </div>
+            
+            <!-- Waveform Visualizer -->
+            <div class="waveform-container">
+                <canvas id="waveform" width="600" height="60"></canvas>
+            </div>
+            
+            <!-- Transcript -->
+            <div id="transcript" class="glow-border"></div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initReactor, setAudioLevel } from '/static/reactor.js';
+        import { initVoice, startListening, stopListening } from '/static/voice.js';
+        import { initSocket, sendMessage } from '/static/socket.js';
+        
+        // Make setAudioLevel globally accessible for socket.js
+        window.setAudioLevel = setAudioLevel;
+        
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Initializing JARVIS...');
+            
+            // Initialize Three.js reactor
+            const canvas = document.getElementById('canvas');
+            initReactor(canvas);
+            console.log('Reactor initialized');
+            
+            // Initialize WebSocket connection
+            initSocket();
+            console.log('Socket initialized');
+            
+            // Initialize voice recognition
+            const voiceSupported = initVoice();
+            console.log('Voice initialized:', voiceSupported);
+            
+            // Wire up speech result callback
+            window.onSpeechResult = (transcript) => {
+                console.log('Speech result:', transcript);
+                sendMessage(transcript);
+            };
+            
+            // Wire up interim result callback
+            window.onInterimResult = (text) => {
+                const interimEl = document.getElementById('interim-text');
+                if (interimEl) {
+                    interimEl.textContent = text;
+                }
+            };
+            
+            // Setup text input fallback
+            setupTextInput();
+            
+            // Remove boot sequence after animation
+            setTimeout(() => {
+                const boot = document.getElementById('boot');
+                if (boot) {
+                    boot.style.display = 'none';
+                }
+            }, 4000);
+            
+            console.log('JARVIS ready');
+        });
+        
+        function setupTextInput() {
+            const input = document.getElementById('text-input');
+            const sendBtn = document.getElementById('send-btn');
+            
+            if (!input || !sendBtn) return;
+            
+            // Send on Enter key
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && input.value.trim()) {
+                    sendMessage(input.value.trim());
+                    input.value = '';
+                }
+            });
+            
+            // Send on button click
+            sendBtn.addEventListener('click', () => {
+                if (input.value.trim()) {
+                    sendMessage(input.value.trim());
+                    input.value = '';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
